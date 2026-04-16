@@ -1,27 +1,28 @@
 import { useMemo } from 'react';
-import { useLiveQuery } from '@tanstack/react-db';
+import { useLiveQuery } from '@electric-sql/pglite-react';
 import { getUKLocalDate } from '../../services/temporalService';
 import { dailyLogsCollection, animalsCollection } from '../../lib/database';
 import { LogEntry, AnimalCategory } from '../../types';
 
 export const useDailyLogData = (viewDate: string, activeCategory: string) => {
-  const { data: logs = [], isLoading: logsLoading } = useLiveQuery((q) => q.from({ item: dailyLogsCollection }));
-  const { data: animals = [], isLoading: animalsLoading } = useLiveQuery((q) => q.from({ item: animalsCollection }));
+  const result = useLiveQuery(`SELECT * FROM daily_logs ORDER BY created_at DESC;`);
   
   const dailyLogs = useMemo(() => {
-    let result = logs.filter((log: LogEntry) => !log.isDeleted);
-    
-    if (viewDate !== 'all') {
-       const targetDate = viewDate === 'today' ? getUKLocalDate() : viewDate;
-       result = result.filter((log: LogEntry) => log.logDate === targetDate);
-    }
-    
-    return result.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  }, [logs, viewDate]);
+     let logs = result?.rows || [];
+     let resultLogs = logs.filter((log: any) => !log.is_deleted);
+     
+     if (viewDate !== 'all') {
+        const targetDate = viewDate === 'today' ? getUKLocalDate() : viewDate;
+        resultLogs = resultLogs.filter((log: any) => log.log_date === targetDate);
+     }
+     
+     return resultLogs.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  }, [result, viewDate]);
 
+  const { data: animals = [] } = useLiveQuery(`SELECT * FROM animals WHERE is_deleted = false ORDER BY name ASC;`) || {};
   const filteredAnimals = useMemo(() => {
     return animals.filter((a: any) => {
-      if (a.isDeleted || a.archived) return false;
+      if (a.is_deleted || a.archived) return false;
       if (activeCategory === 'all') return true;
       return a.category === activeCategory;
     });

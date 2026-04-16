@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
+import { PGliteProvider } from '@electric-sql/pglite-react';
+import { localDB } from './lib/pglite';
+import { useSyncEngine } from './hooks/useSyncEngine';
 import { queryClient } from './lib/queryClient';
 import { useAuthStore } from './store/authStore';
 import { router } from './router';
@@ -32,6 +35,7 @@ function GlobalHooks() {
 }
 
 export default function App() {
+  useSyncEngine(); // Mount the silent engine
   const initialize = useAuthStore(state => state.initialize);
   const currentUser = useAuthStore(state => state.currentUser);
 
@@ -53,10 +57,12 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <GlobalHooks />
-        <RouterProvider router={router} context={{ auth: authContext }} />
-      </QueryClientProvider>
+      <PGliteProvider db={localDB}>
+        <QueryClientProvider client={queryClient}>
+          <GlobalHooks />
+          <RouterProvider router={router} context={{ auth: authContext }} />
+        </QueryClientProvider>
+      </PGliteProvider>
     </ErrorBoundary>
   );
 }

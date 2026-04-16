@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useDailyLogData } from './useDailyLogData';
+import { useAnimalsData } from '../animals/useAnimalsData';
 import { AnimalCategory, LogType } from '../../types';
 import { Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import AddEntryModal from './AddEntryModal';
@@ -18,7 +19,11 @@ export default function DailyLog() {
   const [selectedAnimal, setSelectedAnimal] = useState<any>(null);
   const [initialLogType, setInitialLogType] = useState<LogType>(LogType.WEIGHT);
 
-  const { animals, dailyLogs, isLoading, addLogEntry, updateLogEntry } = useDailyLogData(viewDate, activeTab);
+  // Explicitly destructure with strict fallback defaults
+  const { dailyLogs = [], isLoading: logsLoading = false, addLogEntry, updateLogEntry } = useDailyLogData(viewDate, activeTab) || {};
+  const { animals = [], isLoading: animalsLoading = false } = useAnimalsData() || {};
+
+  const isLoading = logsLoading || animalsLoading;
 
   // SAFE RETRIEVAL: Prevents Vite crash
   const getTodayLog = (animalId: string, logType: LogType) => {

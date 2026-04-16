@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { AnimalCategory, DailyRound, LogType } from '../../types';
-import { useLiveQuery } from '@tanstack/react-db';
-import { animalsCollection, dailyLogsCollection, dailyRoundsCollection } from '../../lib/database';
+import { useLiveQuery } from '@electric-sql/pglite-react';
+import { dailyRoundsCollection } from '../../lib/database';
 
 interface AnimalCheckState {
     isAlive?: boolean;
@@ -12,17 +12,16 @@ interface AnimalCheckState {
 }
 
 export function useDailyRoundData(viewDate: string) {
-    // 1. REACTIVE UI with Official Selectors & Safe Arrays
-    const { data: rawAnimals, isLoading: isLoadingAnimals } = useLiveQuery((q) => q.from({ item: animalsCollection }));
-    const allAnimals = Array.isArray(rawAnimals) ? rawAnimals : [];
-
-    const { data: rawLogs, isLoading: isLoadingLogs } = useLiveQuery((q) => q.from({ item: dailyLogsCollection }));
-    const liveLogs = Array.isArray(rawLogs) ? rawLogs : [];
-
-    const { data: rawRounds, isLoading: isLoadingRounds } = useLiveQuery((q) => q.from({ item: dailyRoundsCollection }));
-    const liveRounds = Array.isArray(rawRounds) ? rawRounds : [];
+    // PGlite Adapters
+    const animalsResult = useLiveQuery(`SELECT * FROM animals WHERE is_deleted = false AND archived = false;`);
+    const logsResult = useLiveQuery(`SELECT * FROM daily_logs;`);
+    const roundsResult = useLiveQuery(`SELECT * FROM daily_rounds WHERE date = $1 ORDER BY created_at DESC;`, [viewDate]);
     
-    const isLoading = isLoadingAnimals || isLoadingLogs || isLoadingRounds;
+    const isLoading = animalsResult?.rows === undefined || logsResult?.rows === undefined || roundsResult?.rows === undefined;
+    
+    const allAnimals = animalsResult?.rows || [];
+    const liveLogs = logsResult?.rows || [];
+    const liveRounds = roundsResult?.rows || [];
 
     const [roundType, setRoundType] = useState<'Morning' | 'Evening'>('Morning');
     const [activeTab, setActiveTab] = useState<AnimalCategory>(AnimalCategory.OWLS);
